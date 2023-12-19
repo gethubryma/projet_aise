@@ -22,7 +22,7 @@ void set_value(struct Context *c, const char *key, const char *value) {
             return;
         }
     }
-    //si la clé n'est pas trouvée ajouter une nouvelle clé valeur
+    //si la clé n'est pas trouvée(vide) ajouter une nouvelle clé valeur
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) == 0) {
             strncpy(c->entries[i].key, key, sizeof(c->entries[i].key) - 1);
