@@ -1,16 +1,17 @@
 #include "server.h"
 
 void set_value(struct Context *c, const char *key, const char *value) {
+    //synchronisation 
     pthread_mutex_lock(&c->mutex);
 
-    // recherche de la cle dans le tab
+    // recherche de la cle existe dans le tab entries[] elle la met a jour
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
-            // Key found, update the value
+            
             strncpy(c->entries[i].value, value, sizeof(c->entries[i].value) - 1);
             c->entries[i].value[sizeof(c->entries[i].value) - 1] = '\0';
 
-            // Insert into the file
+            // et l'insére dans le fichier Cle_Valeur.data
             FILE *file = fopen(FICHIER, "a");
             if (file != NULL) {
                 fprintf(file, "%s %s\n", key, value);
@@ -21,7 +22,7 @@ void set_value(struct Context *c, const char *key, const char *value) {
             return;
         }
     }
-
+    //si la clé n'est pas trouvée ajouter une nouvelle clé valeur
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) == 0) {
             strncpy(c->entries[i].key, key, sizeof(c->entries[i].key) - 1);
@@ -30,7 +31,7 @@ void set_value(struct Context *c, const char *key, const char *value) {
             strncpy(c->entries[i].value, value, sizeof(c->entries[i].value) - 1);
             c->entries[i].value[sizeof(c->entries[i].value) - 1] = '\0';
 
-            // inserer dans file 
+            // ensuite insérer dans le fichier 
             FILE *file = fopen(FICHIER, "a");
             if (file != NULL) {
                 fprintf(file, "%s %s\n", key, value);
@@ -48,7 +49,7 @@ void get_values(struct Context *c, int client_socket, const char *requested_key)
     pthread_mutex_lock(&c->mutex);
 
     char response[MAX_BUFFER_SIZE] = "";
-
+    //recherche si la clé existe presente elle renvoie la valeur 
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(requested_key, c->entries[i].key) == 0) {
             
@@ -60,7 +61,7 @@ void get_values(struct Context *c, int client_socket, const char *requested_key)
         }
     }
 
-    // non trouvée
+    // sinon elle affiche le message cle non existante
     strcat(response, "Cle non existante");
     send(client_socket, response, strlen(response), 0);
 
@@ -69,10 +70,10 @@ void get_values(struct Context *c, int client_socket, const char *requested_key)
 
 void delete_value(struct Context *c, const char *key) {
     pthread_mutex_lock(&c->mutex);
-
+    //parcourir 
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
-            
+            //effacer la cle et la valeur en placant le caractére nul
             c->entries[i].key[0] = '\0';
             c->entries[i].value[0] = '\0';
 
@@ -84,13 +85,15 @@ void delete_value(struct Context *c, const char *key) {
     pthread_mutex_unlock(&c->mutex);
 }
 void incr_value(struct Context *c, const char *key) {
-    // Synchronization
+    // Synchronisation
     pthread_mutex_lock(&c->mutex);
-
+    //j"ai stocker la valeur actuelle de la clé donné
     int current_value = 0;
     char value[MAX_VALUE_SIZE];
 
-    
+    //il parcourt le tableau, si la clé est trouvée il incrémente 
+    //sil la trouve pas il icremente a partir de 0
+
     int key_found = 0;
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
@@ -103,6 +106,7 @@ void incr_value(struct Context *c, const char *key) {
 
             strncpy(c->entries[i].value, value, sizeof(c->entries[i].value) - 1);
             c->entries[i].value[sizeof(c->entries[i].value) - 1] = '\0';
+            //ensuite ajoute dans le fichier 
 
             FILE *file = fopen(FICHIER, "a");
             if (file != NULL) {
@@ -113,7 +117,7 @@ void incr_value(struct Context *c, const char *key) {
             break;
         }
     }
-
+    
     if (!key_found) {
         current_value = 1;
         sprintf(value, "%d", current_value);
@@ -140,7 +144,7 @@ void incr_value(struct Context *c, const char *key) {
 
     pthread_mutex_unlock(&c->mutex);
 }
-
+//la meme chose pour la decrementation sil trouve il decremente sinon affiche -1
 void decr_value(struct Context *c, const char *key) {
     // Synchronisation
     pthread_mutex_lock(&c->mutex);
@@ -197,31 +201,33 @@ void decr_value(struct Context *c, const char *key) {
     pthread_mutex_unlock(&c->mutex);
 }
 
-
+//fait un parcourt si la clé existe ou non 
 int key_exists(struct Context *c, const char *key) {
     pthread_mutex_lock(&c->mutex);
 
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
             pthread_mutex_unlock(&c->mutex);
-            return 1; // Key exists
+            return 1;
         }
     }
 
     pthread_mutex_unlock(&c->mutex);
     return 0; 
 }
+//affiche un message passé comme argument 
 void echo_message(int client_socket, const char *message) {
     send(client_socket, message, strlen(message), 0);
 }
-
+//faire une concatenation
 void append_value(struct Context *c, const char *key, const char *append_text) {
     pthread_mutex_lock(&c->mutex);
-
+    //parcourir le tableau pour chercher une clé ensuite ajouter la valeur
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
-            // cette ligne est ajouter pour faire un espace 
+            // cette ligne est ajouter pour ajouter un espace 
             strncat(c->entries[i].value, " ", sizeof(c->entries[i].value) - strlen(c->entries[i].value) - 1);
+            //ajouter le append_text 
             strncat(c->entries[i].value, append_text, sizeof(c->entries[i].value) - strlen(c->entries[i].value) - 1);
             c->entries[i].value[sizeof(c->entries[i].value) - 1] = '\0';
 
@@ -240,7 +246,7 @@ void append_value(struct Context *c, const char *key, const char *append_text) {
     
     pthread_mutex_unlock(&c->mutex);
 }
-
+//cette fonction ajoute des valeur a une liste 
 void rpush_values(struct Context *c, const char *key, char *values[]) {
     pthread_mutex_lock(&c->mutex);
 
@@ -249,6 +255,7 @@ void rpush_values(struct Context *c, const char *key, char *values[]) {
             strncpy(c->entries[i].key, key, sizeof(c->entries[i].key) - 1);
             c->entries[i].key[sizeof(c->entries[i].key) - 1] = '\0';
 
+            //initialiser la chaine pour concatner 
             char concatenated_values[MAX_VALUE_SIZE] = "";
             for (int j = 0; values[j] != NULL; ++j) {
                 strncat(concatenated_values, values[j], sizeof(concatenated_values) - strlen(concatenated_values) - 1);
@@ -259,7 +266,7 @@ void rpush_values(struct Context *c, const char *key, char *values[]) {
             strncpy(c->entries[i].value, concatenated_values, sizeof(c->entries[i].value) - 1);
             c->entries[i].value[sizeof(c->entries[i].value) - 1] = '\0';
 
-            // Add the key and concatenated values to the file
+           
             FILE *file = fopen(FICHIER, "a");
             if (file != NULL) {
                 fprintf(file, "%s %s\n", key, concatenated_values);
@@ -272,8 +279,9 @@ void rpush_values(struct Context *c, const char *key, char *values[]) {
 
     pthread_mutex_unlock(&c->mutex);
 }
+//quitter la connection d'une maniére propre 
 void quit_connection(int client_socket) {
-  
+  //se message saffiche dans le serveur
     printf("Client déconnecté\n");
 
     
@@ -282,7 +290,7 @@ void quit_connection(int client_socket) {
 void rename_key(struct Context *c, const char *key, const char *newkey) {
     pthread_mutex_lock(&c->mutex);
 
-    
+    //remplacer key par newkey
     for (int i = 0; i < MAX_ENTRIES; ++i) {
         if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
            
@@ -298,7 +306,48 @@ void rename_key(struct Context *c, const char *key, const char *newkey) {
 
     pthread_mutex_unlock(&c->mutex);
 }
+//recupére les valeur de RPUSH 
+void lrange_values(struct Context *c, int client_socket, const char *key) {
+    pthread_mutex_lock(&c->mutex);
 
+    char response[MAX_BUFFER_SIZE] = "";
+    char *token;
+    int start = 0, stop = MAX_ENTRIES - 1;
+
+    // si la clé existe 
+    int key_found = 0;
+    for (int i = 0; i < MAX_ENTRIES; ++i) {
+        if (strlen(c->entries[i].key) > 0 && strcmp(key, c->entries[i].key) == 0) {
+            key_found = 1;
+
+            char *values = c->entries[i].value;
+
+            token = strtok(values, " ");
+            int index = 0;
+
+            while (token != NULL) {
+                if (index >= start && index <= stop) {
+    
+                    strcat(response, token);
+                    strcat(response, " ");
+                }
+                token = strtok(NULL, " ");
+                index++;
+            }
+
+            send(client_socket, response, strlen(response), 0);
+            pthread_mutex_unlock(&c->mutex);
+            return;
+        }
+    }
+
+    if (!key_found) {
+        strcat(response, "clé non trouvé");
+        send(client_socket, response, strlen(response), 0);
+    }
+
+    pthread_mutex_unlock(&c->mutex);
+}
 
 
 
@@ -322,7 +371,7 @@ void *handle_client(void *arg) {
         }
 
         buffer[bytes_received] = '\0';
-       
+       //les chiffres inqique la taille 
         if (strcmp(buffer, "PING") == 0) {
             send(client_socket, "PONG", 4, 0);
         } else if (strncmp(buffer, "SET ", 4) == 0) {
@@ -393,7 +442,12 @@ void *handle_client(void *arg) {
 
             rename_key(&server_context, key, newkey);
             send(client_socket, "OK", 2, 0);
+        }else if (strncmp(buffer, "LRANGE ", 7) == 0) {
+            char key[MAX_KEY_SIZE];
+            sscanf(buffer, "LRANGE %s", key);
+            lrange_values(&server_context, client_socket, key);
         }
+
          else {
             
             send(client_socket, "la commande n'existe pas", 30, 0);
@@ -404,7 +458,7 @@ void *handle_client(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-    
+    //le message s"affiche quand on essaye d'éxecuter d"une maniére fausse 
     if (argc != 2) {
         fprintf(stderr, "veillez utiliser: %s <port>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -440,7 +494,7 @@ int main(int argc, char *argv[]) {
         perror("erreur ecoute");
         exit(EXIT_FAILURE);
     }
-    
+    //ce message s"affiche quand le serveur s'allume 
     printf("le serveur est en ecoute sur le port %d...\n", port);
 
     while (1) {
@@ -449,7 +503,7 @@ int main(int argc, char *argv[]) {
             perror("acceptation refusé");
             exit(EXIT_FAILURE);
         }
-
+       //quand un client se connecte au port
         printf("client connecté\n");
 
         if (pthread_create(&thread_id, NULL, handle_client, (void *)&client_socket) != 0) {
