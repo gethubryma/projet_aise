@@ -23,7 +23,7 @@ void send_and_receive(int client_socket, const char *command) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "veillez utiliser ceci: %s <server_ip> <port>\n", argv[0]);
+        fprintf(stderr, "Veuillez utiliser ceci : %s <server_ip> <port>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     server_addr.sin_port = htons(port);
 
     if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("la connection a été refusée");
+        perror("La connexion a été refusée");
         exit(EXIT_FAILURE);
     }
 
@@ -58,13 +58,14 @@ int main(int argc, char *argv[]) {
 
         command[strcspn(command, "\n")] = '\0';
 
-        if (strcmp(command, "exit") == 0) {
+        if (strcmp(command, "exit") == 0 || strcmp(command, "QUIT") == 0) {
+           
             break;
-        }
+        } 
 
         send_and_receive(client_socket, command);
     }
-
+    
     close(client_socket);
 
     return 0;
